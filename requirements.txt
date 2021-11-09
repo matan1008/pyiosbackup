@@ -1,5 +1,5 @@
-bpylist2
-cryptography
+bpylist2>=4.0.1
+cryptography>=35.0.0
 packaging
 construct
 click
