@@ -56,7 +56,7 @@ class Keybag:
         """
         keybag = keybag_struct.parse(manifest['BackupKeyBag'])
         # The class count excludes the root class (first class in the keybag) and is one based.
-        class_count = [e.data for e in keybag if e.tag == b'CLAS'][0] - 2
+        class_count = [e.data for e in keybag if e.tag == b'CLAS'][0] - 1
         logger.debug(f'Found {class_count} key classes')
         classes_index = len(keybag) - (Keybag.CLASS_ELEMENTS_COUNT * class_count)
         decryption_key = Keybag._decryption_key_from_password(password, keybag[:classes_index], manifest)

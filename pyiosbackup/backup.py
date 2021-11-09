@@ -34,7 +34,7 @@ class Backup:
         self.path = backup_path
         self.keybag = keybag
         self._manifest_db_path = manifest_db_path
-        self._manifest_db_conn = sqlite3.connect(manifest_db_path)
+        self._manifest_db_conn = sqlite3.connect(str(manifest_db_path))
         self._manifest_db_conn.row_factory = sqlite3.Row
         self._status = status
         self._info = info
