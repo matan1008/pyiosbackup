@@ -2,40 +2,39 @@ from pathlib import Path
 import logging
 import plistlib
 import shutil
-import sqlite3
-import tempfile
 
 from packaging.version import Version
 
 from pyiosbackup.entry import Entry
 from pyiosbackup.keybag import Keybag
+from pyiosbackup.manifest_dbs.factory import from_path as manifest_db_from_path
+from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
+from pyiosbackup.manifest_plist import ManifestPlist
+from pyiosbackup.exceptions import BackupPasswordIsRequired
 
-MANIFEST_PLIST_PATH = 'Manifest.plist'
 INFO_PLIST_PATH = 'Info.plist'
 STATUS_PLIST_PATH = 'Status.plist'
-MANIFEST_DB_PATH = 'Manifest.db'
-
-ENTRIES_QUERY = 'SELECT * FROM Files'
 
 logger = logging.getLogger('pyiosbackup')
 logger.addHandler(logging.NullHandler())
 
 
 class Backup:
-    def __init__(self, backup_path: Path, manifest_db_path: Path, status, info, keybag: Keybag = None):
+    def __init__(self, backup_path: Path, manifest_db: ManifestDb, manifest_plist: ManifestPlist, status, info,
+                 keybag: Keybag):
         """
         Create a Backup object.
         :param backup_path: Path to the original backup.
-        :param manifest_db_path: Path to a decrypted Manifest.db.
+        :param manifest_db: Path to a decrypted Manifest.db.
+        :param manifest_plist: Manifest plist.
         :param dict status: Loaded Status.plist.
         :param dict info: Loaded Info.plist.
         :param dict keybag: Decryption keybag, None if backup is not encrypted.
         """
         self.path = backup_path
         self.keybag = keybag
-        self._manifest_db_path = manifest_db_path
-        self._manifest_db_conn = sqlite3.connect(str(manifest_db_path))
-        self._manifest_db_conn.row_factory = sqlite3.Row
+        self._manifest_db = manifest_db
+        self._manifest_plist = manifest_plist
         self._status = status
         self._info = info
 
@@ -49,36 +48,20 @@ class Backup:
         :rtype: Backup
         """
         logger.info(f'Creating backup from {backup_path}')
-
         backup_path = Path(backup_path)
-        manifest_db = (backup_path / MANIFEST_DB_PATH).read_bytes()
+        manifest = ManifestPlist.from_path(backup_path / ManifestPlist.NAME)
 
-        if not password:
-            logger.info(f'Password is empty, continue as decrypted backup')
-            return Backup.from_manifest_db(backup_path, manifest_db)
+        if not password and manifest.is_encrypted:
+            logger.error('Password is required for encrypted backup')
+            raise BackupPasswordIsRequired()
+        if password and not manifest.is_encrypted:
+            logger.warning('Password supplied for not encrypted backup')
 
-        manifest = plistlib.loads((backup_path / MANIFEST_PLIST_PATH).read_bytes())
         keybag = Keybag.from_manifest(manifest, password)
-        if Version(manifest['Lockdown']['ProductVersion']) > Version('10.2'):
-            manifest_db = keybag.decrypt(manifest_db, manifest['ManifestKey'])
-        return Backup.from_manifest_db(backup_path, manifest_db, keybag)
-
-    @staticmethod
-    def from_manifest_db(backup_path: Path, manifest_db: bytes, keybag: Keybag = None):
-        """
-        Create a backup object from a backup directory and decrypted Manifest.db.
-        :param backup_path: Path to a backup directory.
-        :param manifest_db: Decrypted data of Manifest.db file.
-        :param keybag: Decryption keybag for when backup is decrypted.
-        :return: Backup object.
-        :rtype: Backup
-        """
+        manifest_db = manifest_db_from_path(backup_path, manifest, keybag)
         info = plistlib.loads((backup_path / INFO_PLIST_PATH).read_bytes())
         status = plistlib.loads((backup_path / STATUS_PLIST_PATH).read_bytes())
-        manifest_db_file = tempfile.NamedTemporaryFile(suffix='sqlite3', delete=False)
-        logger.debug(f'Writing decrypted backup to {manifest_db_file.name}')
-        manifest_db_file.write(manifest_db)
-        return Backup(backup_path, Path(manifest_db_file.name), status, info, keybag)
+        return Backup(backup_path, manifest_db, manifest, status, info, keybag)
 
     @property
     def date(self):
@@ -96,8 +79,8 @@ class Backup:
         return self._info['Target Identifier']
 
     @property
-    def ios_version(self) -> str:
-        return self._info['Product Version']
+    def ios_version(self) -> Version:
+        return self._manifest_plist.product_version
 
     @property
     def installed_apps(self):
@@ -111,6 +94,10 @@ class Backup:
     def itunes_version(self) -> str:
         return self._info['iTunes Version']
 
+    @property
+    def is_encrypted(self) -> bool:
+        return self._manifest_plist.is_encrypted
+
     def extract_all(self, path='.'):
         """
         Extract all decrypted files from a backup.
@@ -120,10 +107,10 @@ class Backup:
         dest_dir = Path(path)
         dest_dir.mkdir(exist_ok=True, parents=True)
         # Copy all metadata files.
-        shutil.copy2(self.path / MANIFEST_PLIST_PATH, dest_dir / MANIFEST_PLIST_PATH)
+        shutil.copy2(self.path / ManifestPlist.NAME, dest_dir / ManifestPlist.NAME)
         shutil.copy2(self.path / INFO_PLIST_PATH, dest_dir / INFO_PLIST_PATH)
         shutil.copy2(self.path / STATUS_PLIST_PATH, dest_dir / STATUS_PLIST_PATH)
-        shutil.copy2(self._manifest_db_path, dest_dir / MANIFEST_DB_PATH)
+        shutil.copy2(self._manifest_db.path, dest_dir / ManifestDb.NAME)
 
         for file in self.iter_files():
             dest_file = dest_dir / file.hash_path
@@ -164,8 +151,7 @@ class Backup:
         :param file_id: Entry's ID.
         :return: Parsed entry object.
         """
-        metadata = self._manifest_db_conn.cursor().execute(f'{ENTRIES_QUERY} WHERE fileID=\'{file_id}\'').fetchone()
-        return Entry(metadata, self)
+        return Entry(self, **self._manifest_db.get_metadata_by_id(file_id))
 
     def get_entry_by_domain_and_path(self, domain: str, relative_path: str) -> Entry:
         """
@@ -174,31 +160,20 @@ class Backup:
         :param relative_path: File's relative path, e.g. 'Library/Preferences/com.apple.backupd.plist'.
         :return: Parsed entry object.
         """
-        metadata = self._manifest_db_conn.cursor().execute(
-            f'{ENTRIES_QUERY} WHERE domain=\'{domain}\' AND relativePath=\'{relative_path}\''
-        ).fetchone()
-        return Entry(metadata, self)
+        return Entry(self, **self._manifest_db.get_metadata_by_domain_and_path(domain, relative_path))
 
     def iter_entries(self):
         """
         Iter over all entries in backup.
         """
-        entries = self._manifest_db_conn.cursor().execute(f'{ENTRIES_QUERY} ORDER BY relativePath').fetchall()
-        for metadata in entries:
-            yield Entry(metadata, self)
+        for metadata in self._manifest_db.get_all_entries():
+            yield Entry(self, **metadata)
 
     def iter_files(self):
         """
         Iter over all files in backup.
         """
         return filter(lambda f: f.is_file(), self.iter_entries())
-
-    def is_encrypted(self) -> bool:
-        """
-        Test if backup is encrypted.
-        :return: True if encrypted, False otherwise.
-        """
-        return self.keybag is not None
 
     def stats(self):
         """
@@ -228,4 +203,5 @@ class Backup:
             'count': count,
             'files_count': files_count,
             'size': size,
+            'is_encrypted': self._manifest_plist.is_encrypted,
         }
