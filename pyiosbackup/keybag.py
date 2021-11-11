@@ -7,6 +7,8 @@ from construct import Struct, GreedyBytes, Int32ul
 from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from pyiosbackup.manifest_plist import ManifestPlist
+
 logger = logging.getLogger('pyiosbackup')
 
 encryption_key_struct = Struct(
@@ -46,15 +48,15 @@ class Keybag:
         self._wrapping_keys = wrapping_keys
 
     @staticmethod
-    def from_manifest(manifest, password: str):
+    def from_manifest(manifest: ManifestPlist, password: str):
         """
         Create a keybag object from a Manifest.plist.
-        :param dict manifest: Loaded Manifest.plist file.
+        :param manifest: Loaded Manifest.plist file.
         :param password: Password to encrypted backup.
         :return: Keybag object.
         :rtype: Keybag
         """
-        keybag = keybag_struct.parse(manifest['BackupKeyBag'])
+        keybag = keybag_struct.parse(manifest.keybag)
         # The class count excludes the root class (first class in the keybag) and is one based.
         class_count = [e.data for e in keybag if e.tag == b'CLAS'][0] - 1
         logger.debug(f'Found {class_count} key classes')
@@ -88,18 +90,18 @@ class Keybag:
         return self._wrapping_keys[class_]
 
     @staticmethod
-    def _decryption_key_from_password(password: str, root_elements, manifest) -> bytes:
+    def _decryption_key_from_password(password: str, root_elements, manifest: ManifestPlist) -> bytes:
         """
         Create a decryption key.
         :param password: Password to encrypted backup.
         :param root_elements: Root elements of keybag.
-        :param dict manifest: Loaded Manifest.plist file.
+        :param manifest: Loaded Manifest.plist file.
         :return: Decryption key.
         """
         password = password.encode('utf-8')
         root_keys = {key.tag: key.data for key in root_elements}
         logger.debug(f'Using root elements {root_keys}')
-        if Version(manifest['Lockdown']['ProductVersion']) > Version('10.2'):
+        if manifest.product_version > Version('10.2'):
             password = hashlib.pbkdf2_hmac('sha256', password, root_keys[b'DPSL'], root_keys[b'DPIC'], 32)
         return hashlib.pbkdf2_hmac('sha1', password, root_keys[b'SALT'], root_keys[b'ITER'], 32)
 
