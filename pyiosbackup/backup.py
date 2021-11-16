@@ -110,7 +110,7 @@ class Backup:
         shutil.copy2(self.path / ManifestPlist.NAME, dest_dir / ManifestPlist.NAME)
         shutil.copy2(self.path / INFO_PLIST_PATH, dest_dir / INFO_PLIST_PATH)
         shutil.copy2(self.path / STATUS_PLIST_PATH, dest_dir / STATUS_PLIST_PATH)
-        shutil.copy2(self._manifest_db.path, dest_dir / ManifestDb.NAME)
+        shutil.copy2(self._manifest_db.path, dest_dir / self._manifest_db.NAME)
 
         for file in self.iter_files():
             dest_file = dest_dir / file.hash_path
