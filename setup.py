@@ -43,6 +43,7 @@ if __name__ == '__main__':
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
+            'Programming Language :: Python :: 3.11',
         ],
         url='https://github.com/matan1008/pyiosbackup',
         project_urls={
