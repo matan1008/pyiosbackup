@@ -5,7 +5,7 @@ import plistlib
 import pytest
 
 from pyiosbackup import Backup
-from pyiosbackup.exceptions import BackupPasswordIsRequired, NonExistentEntryError
+from pyiosbackup.exceptions import BackupPasswordIsRequiredError, NonExistentEntryError
 from pyiosbackup.backup import STATUS_PLIST_PATH, INFO_PLIST_PATH
 from pyiosbackup.manifest_plist import ManifestPlist
 from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
@@ -128,5 +128,5 @@ def test_creating_from_path_mbdb(tmp_path, manifest_keybag_zeros_before_10_2):
 
 
 def test_not_supplying_password(backup):
-    with pytest.raises(BackupPasswordIsRequired):
+    with pytest.raises(BackupPasswordIsRequiredError):
         Backup.from_path(backup)

@@ -3,7 +3,7 @@ class PyIosBackupException(Exception):
     pass
 
 
-class BackupPasswordIsRequired(PyIosBackupException):
+class BackupPasswordIsRequiredError(PyIosBackupException):
     """ Raise when a password is not supplied for an encrypted backup. """
     pass
 
