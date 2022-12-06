@@ -5,7 +5,7 @@ import plistlib
 import pytest
 
 from pyiosbackup import Backup
-from pyiosbackup.exceptions import BackupPasswordIsRequired
+from pyiosbackup.exceptions import BackupPasswordIsRequired, NonExistentEntryError
 from pyiosbackup.backup import STATUS_PLIST_PATH, INFO_PLIST_PATH
 from pyiosbackup.manifest_plist import ManifestPlist
 from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
@@ -49,6 +49,13 @@ def test_creating_from_path_sqlite3(backup):
     assert file.group_id == 501
     assert file.user_id == 501
     assert file.read_text() == 'Test data'
+
+
+def test_fetching_non_existent_entry(backup):
+    b = Backup.from_path(backup, '0000')
+
+    with pytest.raises(NonExistentEntryError):
+        b.get_entry_by_domain_and_path('unknown-domain', 'unknown-path')
 
 
 example_mbdb = (

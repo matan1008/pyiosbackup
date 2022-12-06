@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from bpylist2 import archiver
 
+from pyiosbackup.exceptions import NonExistentEntryError
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
 
 ENTRIES_QUERY = 'SELECT * FROM Files'
@@ -79,6 +80,9 @@ class ManifestDbSqlite3(ManifestDb):
 
     @staticmethod
     def _load_entry(entry):
+        if entry is None:
+            raise NonExistentEntryError()
+
         mb_info = archiver.unarchive(entry['file'])  # type: MBFile
         return {
             'file_id': entry['fileID'],
