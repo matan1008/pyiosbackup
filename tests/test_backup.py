@@ -5,7 +5,7 @@ import plistlib
 import pytest
 
 from pyiosbackup import Backup
-from pyiosbackup.exceptions import BackupPasswordIsRequired
+from pyiosbackup.exceptions import BackupPasswordIsRequired, MissingEntryError
 from pyiosbackup.backup import STATUS_PLIST_PATH, INFO_PLIST_PATH
 from pyiosbackup.manifest_plist import ManifestPlist
 from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
@@ -49,6 +49,12 @@ def test_creating_from_path_sqlite3(backup):
     assert file.group_id == 501
     assert file.user_id == 501
     assert file.read_text() == 'Test data'
+
+
+def test_missing_entry(backup):
+    b = Backup.from_path(backup, '0000')
+    with pytest.raises(MissingEntryError):
+        b.get_entry_by_domain_and_path('unknown-domain', 'unknown-path')
 
 
 example_mbdb = (
@@ -118,6 +124,22 @@ def test_creating_from_path_mbdb(tmp_path, manifest_keybag_zeros_before_10_2):
     assert file.group_id == 501
     assert file.user_id == 501
     assert file.read_text() == 'Test data'
+
+
+def test_missing_entry_mbdb(tmp_path, manifest_keybag_zeros_before_10_2):
+    (tmp_path / ManifestDbMbdb.NAME).write_bytes(example_mbdb)
+    manifest_plist = tmp_path / ManifestPlist.NAME
+    manifest_plist.write_bytes(plistlib.dumps({
+        'BackupKeyBag': manifest_keybag_zeros_before_10_2,
+        'IsEncrypted': True,
+        'Lockdown': {'ProductVersion': '9.0.1'},
+    }))
+    (tmp_path / INFO_PLIST_PATH).write_bytes(plistlib.dumps({}))
+    (tmp_path / STATUS_PLIST_PATH).write_bytes(plistlib.dumps({}))
+    (tmp_path / '5727bd1c5fa1055e15d8b4a75a74793c84b5ffdc').write_bytes(b'x\xb5\x1c\xa57L:\xd5u\x17B\x88h\x8c\xdaI')
+    b = Backup.from_path(tmp_path, '0000')
+    with pytest.raises(MissingEntryError):
+        b.get_entry_by_domain_and_path('unknown-domain', 'unknown-path')
 
 
 def test_not_supplying_password(backup):

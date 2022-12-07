@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from bpylist2 import archiver
 
+from pyiosbackup.exceptions import MissingEntryError
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
 
 ENTRIES_QUERY = 'SELECT * FROM Files'
@@ -63,12 +64,10 @@ class ManifestDbSqlite3(ManifestDb):
         return cls(Path(manifest_db_file.name))
 
     def get_metadata_by_id(self, file_id: str):
-        return self._load_entry(self._cursor.execute(f'{ENTRIES_QUERY} WHERE fileID=\'{file_id}\'').fetchone())
+        return self._fetch_one_entry(f'{ENTRIES_QUERY} WHERE fileID=\'{file_id}\'')
 
     def get_metadata_by_domain_and_path(self, domain: str, relative_path: str):
-        return self._load_entry(self._cursor.execute(
-            f'{ENTRIES_QUERY} WHERE domain=\'{domain}\' AND relativePath=\'{relative_path}\''
-        ).fetchone())
+        return self._fetch_one_entry(f'{ENTRIES_QUERY} WHERE domain=\'{domain}\' AND relativePath=\'{relative_path}\'')
 
     def get_all_entries(self):
         return map(self._load_entry, self._cursor.execute(f'{ENTRIES_QUERY} ORDER BY relativePath').fetchall())
@@ -76,6 +75,12 @@ class ManifestDbSqlite3(ManifestDb):
     @property
     def _cursor(self):
         return self._conn.cursor()
+
+    def _fetch_one_entry(self, query):
+        result = self._cursor.execute(query).fetchone()
+        if result is None:
+            raise MissingEntryError()
+        return self._load_entry(result)
 
     @staticmethod
     def _load_entry(entry):
