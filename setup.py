@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 BASE_DIR = Path(__file__).parent.resolve(strict=True)
-VERSION = '0.1.1'
+VERSION = '0.2.0'
 PACKAGE_NAME = 'pyiosbackup'
 PACKAGES = [p for p in find_packages() if not p.startswith('tests')]
 
