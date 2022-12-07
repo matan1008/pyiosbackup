@@ -29,9 +29,7 @@ if __name__ == '__main__':
         description='A python parser for iOS backups',
         long_description=get_description(),
         long_description_content_type='text/markdown',
-        cmdclass={},
         packages=PACKAGES,
-        data_files=[('.', ['requirements.txt'])],
         author='Matan Perelman',
         install_requires=parse_requirements(),
         entry_points={
