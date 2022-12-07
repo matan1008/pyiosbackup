@@ -5,6 +5,7 @@ import hashlib
 from construct import Struct, Const, Bytes, GreedyRange, Int16ub, IfThenElse, Computed, this, \
     Int32ub, Int64ub, Byte, Array, PaddedString
 
+from pyiosbackup.exceptions import MissingEntryError
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
 
 mbdb_struct = Struct(
@@ -75,11 +76,13 @@ class ManifestDbMbdb(ManifestDb):
         for record in self.records:
             if record['file_id'] == file_id:
                 return record
+        raise MissingEntryError()
 
     def get_metadata_by_domain_and_path(self, domain: str, relative_path: str):
         for record in self.records:
             if record['domain'] == domain and record['relative_path'] == relative_path:
                 return record
+        raise MissingEntryError()
 
     def get_all_entries(self):
         return self.records

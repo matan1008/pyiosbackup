@@ -29,9 +29,7 @@ if __name__ == '__main__':
         description='A python parser for iOS backups',
         long_description=get_description(),
         long_description_content_type='text/markdown',
-        cmdclass={},
         packages=PACKAGES,
-        data_files=[('.', ['requirements.txt'])],
         author='Matan Perelman',
         install_requires=parse_requirements(),
         entry_points={
@@ -45,6 +43,7 @@ if __name__ == '__main__':
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
+            'Programming Language :: Python :: 3.11',
         ],
         url='https://github.com/matan1008/pyiosbackup',
         project_urls={
