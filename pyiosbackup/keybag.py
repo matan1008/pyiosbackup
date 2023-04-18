@@ -61,15 +61,19 @@ class Keybag:
         class_count = [e.data for e in keybag if e.tag == b'CLAS'][0] - 1
         logger.debug(f'Found {class_count} key classes')
         classes_index = len(keybag) - (Keybag.CLASS_ELEMENTS_COUNT * class_count)
-        decryption_key = Keybag._decryption_key_from_password(password, keybag[:classes_index], manifest)
-        logger.debug(f'Using decryption key {decryption_key.hex()}')
+        if password:
+            decryption_key = Keybag._decryption_key_from_password(password, keybag[:classes_index], manifest)
+            logger.debug(f'Using decryption key {decryption_key.hex()}')
 
-        classes_keys = {}
-        for cls_offset in range(classes_index, len(keybag), Keybag.CLASS_ELEMENTS_COUNT):
-            current_class_data = keybag[cls_offset:cls_offset + Keybag.CLASS_ELEMENTS_COUNT]
-            classes_keys.update(Keybag._parse_class_key(current_class_data, decryption_key))
+            classes_keys = {}
+            for cls_offset in range(classes_index, len(keybag), Keybag.CLASS_ELEMENTS_COUNT):
+                current_class_data = keybag[cls_offset:cls_offset + Keybag.CLASS_ELEMENTS_COUNT]
+                classes_keys.update(Keybag._parse_class_key(current_class_data, decryption_key))
 
-        return Keybag(classes_keys)
+            return Keybag(classes_keys)
+
+        else:
+            return Keybag({})
 
     def decrypt(self, data: bytes, key: bytes) -> bytes:
         """

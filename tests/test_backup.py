@@ -140,8 +140,3 @@ def test_missing_entry_mbdb(tmp_path, manifest_keybag_zeros_before_10_2):
     b = Backup.from_path(tmp_path, '0000')
     with pytest.raises(MissingEntryError):
         b.get_entry_by_domain_and_path('unknown-domain', 'unknown-path')
-
-
-def test_not_supplying_password(backup):
-    with pytest.raises(BackupPasswordIsRequired):
-        Backup.from_path(backup)
