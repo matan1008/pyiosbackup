@@ -1,16 +1,16 @@
-from pathlib import Path
 import logging
 import plistlib
 import shutil
+from pathlib import Path
 
 from packaging.version import Version
 
 from pyiosbackup.entry import Entry
+from pyiosbackup.exceptions import BackupPasswordIsRequired
 from pyiosbackup.keybag import Keybag
 from pyiosbackup.manifest_dbs.factory import from_path as manifest_db_from_path
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
 from pyiosbackup.manifest_plist import ManifestPlist
-from pyiosbackup.exceptions import BackupPasswordIsRequired
 
 INFO_PLIST_PATH = 'Info.plist'
 STATUS_PLIST_PATH = 'Status.plist'
@@ -57,7 +57,7 @@ class Backup:
         if password and not manifest.is_encrypted:
             logger.warning('Password supplied for not encrypted backup')
 
-        keybag = Keybag.from_manifest(manifest, password)
+        keybag = Keybag.from_manifest(manifest, password) if manifest.is_encrypted else None
         manifest_db = manifest_db_from_path(backup_path, manifest, keybag)
         info = plistlib.loads((backup_path / INFO_PLIST_PATH).read_bytes())
         status = plistlib.loads((backup_path / STATUS_PLIST_PATH).read_bytes())
