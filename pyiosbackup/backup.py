@@ -98,6 +98,20 @@ class Backup:
     def is_encrypted(self) -> bool:
         return self._manifest_plist.is_encrypted
 
+    def unback(self, path='.'):
+        """
+        Extract all decrypted files from a backup in a filesystem layout
+        :param path: Path to destination directory.
+        """
+        logger.info(f'Extracting backup to {path}')
+        dest_dir = Path(path)
+        dest_dir.mkdir(exist_ok=True, parents=True)
+        for file in self.iter_files():
+            dest_file = dest_dir / file.domain / file.relative_path
+            logger.debug(f'Extracting file {file.filename} to {dest_file}')
+            dest_file.parent.mkdir(exist_ok=True, parents=True)
+            dest_file.write_bytes(file.read_bytes())
+
     def extract_all(self, path='.'):
         """
         Extract all decrypted files from a backup.

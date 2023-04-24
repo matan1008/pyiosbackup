@@ -66,6 +66,17 @@ def extract_all(backup_path, password, target):
 
 @cli.command()
 @backup_path_argument
+@password_argument
+@target_option
+@verbosity
+def unback(backup_path, password, target):
+    """ Decrypt all files in a backup to a filesystem layout."""
+    backup = Backup.from_path(backup_path, password)
+    backup.unback(target)
+
+
+@cli.command()
+@backup_path_argument
 @password_option
 @verbosity
 def stats(backup_path, password):
