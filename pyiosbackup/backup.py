@@ -57,7 +57,7 @@ class Backup:
         if password and not manifest.is_encrypted:
             logger.warning('Password supplied for not encrypted backup')
 
-        keybag = Keybag.from_manifest(manifest, password)
+        keybag = Keybag.from_manifest(manifest, password) if manifest.is_encrypted else None
         manifest_db = manifest_db_from_path(backup_path, manifest, keybag)
         info = plistlib.loads((backup_path / INFO_PLIST_PATH).read_bytes())
         status = plistlib.loads((backup_path / STATUS_PLIST_PATH).read_bytes())
