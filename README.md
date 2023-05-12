@@ -1,6 +1,5 @@
 [![Python application](https://github.com/matan1008/pyiosbackup/workflows/Python%20application/badge.svg)](https://github.com/matan1008/pyiosbackup/actions/workflows/python-app.yml "Python application action")
 [![Pypi version](https://img.shields.io/pypi/v/pyiosbackup.svg)](https://pypi.org/project/pyiosbackup/ "PyPi package")
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/matan1008/pyiosbackup.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/matan1008/pyiosbackup/context:python)
 
 - [Description](#description)
 - [Installation](#installation)
