@@ -3,10 +3,10 @@ import logging
 import math
 
 from construct import Bytes, this, Int32ub, GreedyRange, IfThenElse
-from packaging.version import Version
 from construct import Struct, GreedyBytes, Int32ul
-from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
+from packaging.version import Version
 
 from pyiosbackup.manifest_plist import ManifestPlist
 
