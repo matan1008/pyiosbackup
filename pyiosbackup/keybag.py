@@ -1,11 +1,12 @@
 import hashlib
 import logging
+import math
 
 from construct import Bytes, this, Int32ub, GreedyRange, IfThenElse
-from packaging.version import Version
 from construct import Struct, GreedyBytes, Int32ul
-from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
+from packaging.version import Version
 
 from pyiosbackup.manifest_plist import ManifestPlist
 
@@ -58,7 +59,8 @@ class Keybag:
         """
         keybag = keybag_struct.parse(manifest.keybag)
         # The class count excludes the root class (first class in the keybag) and is one based.
-        class_count = [e.data for e in keybag if e.tag == b'CLAS'][0] - 1
+        first_class_index = [i for i in range(len(keybag)) if keybag[i].tag == b'CLAS'][0]
+        class_count = math.ceil((len(keybag) - first_class_index) / Keybag.CLASS_ELEMENTS_COUNT)
         logger.debug(f'Found {class_count} key classes')
         classes_index = len(keybag) - (Keybag.CLASS_ELEMENTS_COUNT * class_count)
         decryption_key = Keybag._decryption_key_from_password(password, keybag[:classes_index], manifest)
