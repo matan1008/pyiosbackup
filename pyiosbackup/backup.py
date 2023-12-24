@@ -98,7 +98,7 @@ class Backup:
     def is_encrypted(self) -> bool:
         return self._manifest_plist.is_encrypted
 
-    def unback(self, path='.'):
+    def unback(self, path='.', skip_file_not_found=False):
         """
         Extract all decrypted files from a backup in a filesystem layout
         :param path: Path to destination directory.
@@ -110,9 +110,14 @@ class Backup:
             dest_file = dest_dir / file.domain / file.relative_path
             logger.debug(f'Extracting file {file.filename} to {dest_file}')
             dest_file.parent.mkdir(exist_ok=True, parents=True)
-            dest_file.write_bytes(file.read_bytes())
+            try:
+                dest_file.write_bytes(file.read_bytes())
+            except FileNotFoundError:
+                if not skip_file_not_found:
+                    raise
+                logger.error(f'missing backup file: {file}')
 
-    def extract_all(self, path='.'):
+    def extract_all(self, path='.', skip_file_not_found=False):
         """
         Extract all decrypted files from a backup.
         :param path: Path to destination directory.
@@ -130,7 +135,12 @@ class Backup:
             dest_file = dest_dir / file.hash_path
             logger.debug(f'Extracting file {file.filename} to {dest_file}')
             dest_file.parent.mkdir(exist_ok=True, parents=True)
-            dest_file.write_bytes(file.read_bytes())
+            try:
+                dest_file.write_bytes(file.read_bytes())
+            except FileNotFoundError:
+                if not skip_file_not_found:
+                    raise
+                logger.error(f'missing backup file: {file}')
 
     def extract_file_id(self, file_id: str, path='.'):
         """

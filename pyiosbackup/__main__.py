@@ -20,6 +20,8 @@ backup_path_argument = click.argument('backup_path', type=click.Path(exists=True
 password_argument = click.argument('password')
 password_option = click.option('-p', '--password', default='')
 target_option = click.option('--target', type=click.Path(), default='.')
+skip_file_not_found_option = click.option('-s', '--skip-file-not-found', is_flag=True,
+                                          help='only report missing files instead of raising an exception')
 verbosity = click.option('-v', '--verbosity', count=True, callback=set_verbosity, expose_value=False)
 
 
@@ -57,22 +59,24 @@ def extract_id(backup_path, file_id, password, target):
 @backup_path_argument
 @password_argument
 @target_option
+@skip_file_not_found_option
 @verbosity
-def extract_all(backup_path, password, target):
+def extract_all(backup_path, password, target, skip_file_not_found):
     """ Decrypt all files in a backup."""
     backup = Backup.from_path(backup_path, password)
-    backup.extract_all(target)
+    backup.extract_all(target, skip_file_not_found=skip_file_not_found)
 
 
 @cli.command()
 @backup_path_argument
 @password_argument
 @target_option
+@skip_file_not_found_option
 @verbosity
-def unback(backup_path, password, target):
+def unback(backup_path, password, target, skip_file_not_found):
     """ Decrypt all files in a backup to a filesystem layout."""
     backup = Backup.from_path(backup_path, password)
-    backup.unback(target)
+    backup.unback(target, skip_file_not_found=skip_file_not_found)
 
 
 @cli.command()
