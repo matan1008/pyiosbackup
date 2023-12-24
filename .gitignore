@@ -133,3 +133,6 @@ dmypy.json
 
 # macOS
 .DS_Store
+
+# setuptools-scm
+pyiosbackup/_version.py
