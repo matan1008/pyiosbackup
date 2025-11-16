@@ -18,6 +18,13 @@ STATUS_PLIST_PATH = 'Status.plist'
 logger = logging.getLogger('pyiosbackup')
 logger.addHandler(logging.NullHandler())
 
+ILLEGAL_CHARACTERS_IN_PATH = ['<', '>', ':', '"', '|' , '?', '*']
+
+def replace_illegal_characters(path: str) -> str:
+    for char in ILLEGAL_CHARACTERS_IN_PATH:
+        path = path.replace(char, '~')
+    return path
+
 
 class Backup:
     def __init__(self, backup_path: Path, manifest_db: ManifestDb, manifest_plist: ManifestPlist, status, info,
@@ -107,6 +114,7 @@ class Backup:
         dest_dir = Path(path)
         dest_dir.mkdir(exist_ok=True, parents=True)
         for file in self.iter_files():
+            file.relative_path = replace_illegal_characters(file.relative_path)
             dest_file = dest_dir / file.domain / file.relative_path
             logger.debug(f'Extracting file {file.filename} to {dest_file}')
             dest_file.parent.mkdir(exist_ok=True, parents=True)
