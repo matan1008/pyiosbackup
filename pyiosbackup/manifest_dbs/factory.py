@@ -3,8 +3,8 @@ from pathlib import Path
 from packaging.version import Version
 
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
-from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
 from pyiosbackup.manifest_dbs.mbdb import ManifestDbMbdb
+from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
 
 
 def from_path(backup_path: Path, manifest, keybag) -> ManifestDb:

@@ -1,9 +1,9 @@
-from pathlib import Path
-from datetime import timezone, datetime
 import hashlib
+from datetime import datetime, timezone
+from pathlib import Path
 
-from construct import Struct, Const, Bytes, GreedyRange, Int16ub, IfThenElse, Computed, this, \
-    Int32ub, Int64ub, Byte, Array, PaddedString
+from construct import Array, Byte, Bytes, Computed, Const, GreedyRange, IfThenElse, Int16ub, Int32ub, Int64ub, \
+    PaddedString, Struct, this
 
 from pyiosbackup.exceptions import MissingEntryError
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb

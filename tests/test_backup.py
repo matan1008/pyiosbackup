@@ -1,15 +1,15 @@
+import plistlib
 from datetime import datetime, timezone
 from pathlib import Path
-import plistlib
 
 import pytest
 
 from pyiosbackup import Backup
+from pyiosbackup.backup import INFO_PLIST_PATH, STATUS_PLIST_PATH
 from pyiosbackup.exceptions import BackupPasswordIsRequired, MissingEntryError
-from pyiosbackup.backup import STATUS_PLIST_PATH, INFO_PLIST_PATH
-from pyiosbackup.manifest_plist import ManifestPlist
-from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
 from pyiosbackup.manifest_dbs.mbdb import ManifestDbMbdb
+from pyiosbackup.manifest_dbs.sqlite3 import ManifestDbSqlite3
+from pyiosbackup.manifest_plist import ManifestPlist
 
 
 @pytest.fixture(scope='function')

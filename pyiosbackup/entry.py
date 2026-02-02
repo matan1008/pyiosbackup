@@ -1,10 +1,10 @@
-from dataclasses import dataclass
-from datetime import datetime
 import pathlib
 import posixpath
+from dataclasses import dataclass
+from datetime import datetime
 
-from packaging.version import Version
 from cryptography.hazmat.primitives import padding
+from packaging.version import Version
 
 FILE_DATA_PAD_BITS = 128  # Files data is 128 bits (16 bytes) padded.
 MODE_TYPE_MASK = 0xE000

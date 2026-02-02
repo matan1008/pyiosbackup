@@ -2,8 +2,7 @@ import hashlib
 import logging
 import math
 
-from construct import Bytes, this, Int32ub, GreedyRange, IfThenElse
-from construct import Struct, GreedyBytes, Int32ul
+from construct import Bytes, GreedyBytes, GreedyRange, IfThenElse, Int32ub, Int32ul, Struct, this
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
 from packaging.version import Version
