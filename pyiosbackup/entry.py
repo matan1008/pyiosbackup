@@ -1,16 +1,19 @@
-from dataclasses import dataclass
-from datetime import datetime
+import logging
 import pathlib
 import posixpath
+from dataclasses import dataclass
+from datetime import datetime
 
-from packaging.version import Version
 from cryptography.hazmat.primitives import padding
+from packaging.version import Version
 
 FILE_DATA_PAD_BITS = 128  # Files data is 128 bits (16 bytes) padded.
 MODE_TYPE_MASK = 0xE000
 MODE_TYPE_SYMLINK = 0xA000
 MODE_TYPE_FILE = 0x8000
 MODE_TYPE_DIR = 0x4000
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -114,10 +117,21 @@ class Entry:
         encrypted = self.read_raw()
         if not self.backup.is_encrypted:
             return encrypted
+        if not self.encryption_key:
+            # Some entries are stored without an encryption key even in encrypted backups.
+            return encrypted
         decrypted = self.backup.keybag.decrypt(encrypted, self.encryption_key)
-        unpadder = padding.PKCS7(FILE_DATA_PAD_BITS).unpadder()
-        decrypted = unpadder.update(decrypted) + unpadder.finalize()
-        return decrypted
+        try:
+            unpadder = padding.PKCS7(FILE_DATA_PAD_BITS).unpadder()
+            return unpadder.update(decrypted) + unpadder.finalize()
+        except ValueError:
+            # Fall back to manifest size when padding is absent or corrupt.
+            if self.size is not None and self.size <= len(decrypted):
+                logger.warning(
+                    f"Padding failed for {self.relative_path}; returning decrypted data trimmed to manifest size.")
+                return decrypted[:self.size]
+            logger.warning(f"Padding failed for {self.relative_path}; returning raw decrypted data.")
+            return decrypted
 
     def is_dir(self) -> bool:
         """
