@@ -6,7 +6,7 @@ from pathlib import Path
 from packaging.version import Version
 
 from pyiosbackup.entry import Entry
-from pyiosbackup.exceptions import BackupPasswordIsRequired
+from pyiosbackup.exceptions import BackupPasswordIsRequired, CorruptedEntryError
 from pyiosbackup.keybag import Keybag
 from pyiosbackup.manifest_dbs.factory import from_path as manifest_db_from_path
 from pyiosbackup.manifest_dbs.manifest_db_interface import ManifestDb
@@ -98,10 +98,11 @@ class Backup:
     def is_encrypted(self) -> bool:
         return self._manifest_plist.is_encrypted
 
-    def unback(self, path='.'):
+    def unback(self, path='.', strict: bool = False):
         """
         Extract all decrypted files from a backup in a filesystem layout
         :param path: Path to destination directory.
+        :param strict: Raise exception on extracting errors.
         """
         logger.info(f'Extracting backup to {path}')
         dest_dir = Path(path)
@@ -110,12 +111,13 @@ class Backup:
             dest_file = dest_dir / file.domain / file.relative_path
             logger.debug(f'Extracting file {file.filename} to {dest_file}')
             dest_file.parent.mkdir(exist_ok=True, parents=True)
-            dest_file.write_bytes(file.read_bytes())
+            self._extract_and_write_entry_content(file, dest_file, strict)
 
-    def extract_all(self, path='.'):
+    def extract_all(self, path='.', strict: bool = False):
         """
         Extract all decrypted files from a backup.
         :param path: Path to destination directory.
+        :param strict: Raise exception on extracting errors.
         """
         logger.info(f'Extracting backup to {path}')
         dest_dir = Path(path)
@@ -130,34 +132,36 @@ class Backup:
             dest_file = dest_dir / file.hash_path
             logger.debug(f'Extracting file {file.filename} to {dest_file}')
             dest_file.parent.mkdir(exist_ok=True, parents=True)
-            dest_file.write_bytes(file.read_bytes())
+            self._extract_and_write_entry_content(file, dest_file, strict)
 
-    def extract_file_id(self, file_id: str, path='.'):
+    def extract_file_id(self, file_id: str, path='.', strict: bool = False):
         """
         Extract a file by its id.
         :param file_id: File ID.
         :param path: Path to destination directory.
+        :param strict: Raise exception on extracting errors.
         """
         entry = self.get_entry_by_id(file_id)
         dest = Path(path)
         if dest.is_dir():
             dest /= entry.name
         dest.parent.mkdir(exist_ok=True, parents=True)
-        dest.write_bytes(entry.read_bytes())
+        self._extract_and_write_entry_content(entry, dest, strict)
 
-    def extract_domain_and_path(self, domain: str, relative_path: str, path='.'):
+    def extract_domain_and_path(self, domain: str, relative_path: str, path='.', strict: bool = False):
         """
         Extract a file by its domain and path.
         :param domain: File's domain, e.g. 'RootDomain'.
         :param relative_path: File's relative path, e.g. 'Library/Preferences/com.apple.backupd.plist'.
         :param path: Path to destination directory.
+        :param strict: Raise exception on extracting errors.
         """
         entry = self.get_entry_by_domain_and_path(domain, relative_path)
         dest = Path(path)
         if dest.is_dir():
             dest /= entry.name
         dest.parent.mkdir(exist_ok=True, parents=True)
-        dest.write_bytes(entry.read_bytes())
+        self._extract_and_write_entry_content(entry, dest, strict)
 
     def get_entry_by_id(self, file_id: str) -> Entry:
         """
@@ -219,3 +223,11 @@ class Backup:
             'size': size,
             'is_encrypted': self._manifest_plist.is_encrypted,
         }
+
+    def _extract_and_write_entry_content(self, entry: Entry, dest: Path, strict: bool):
+        try:
+            dest.write_bytes(entry.read_bytes())
+        except ValueError:
+            logger.warning(f'Could not extract content for {entry.relative_path}')
+            if strict:
+                raise CorruptedEntryError()

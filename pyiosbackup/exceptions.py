@@ -10,3 +10,8 @@ class BackupPasswordIsRequired(PyIosBackupException):
 class MissingEntryError(PyIosBackupException):
     """ Raise when trying to access an entry that doesn't exist. """
     pass
+
+
+class CorruptedEntryError(PyIosBackupException):
+    """ Raise when trying to extract and decrypt an entry fails. """
+    pass
