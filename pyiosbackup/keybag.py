@@ -1,8 +1,10 @@
 import hashlib
 import logging
 import math
+from dataclasses import dataclass
+from typing import Annotated, Union
 
-from construct import Bytes, GreedyBytes, GreedyRange, IfThenElse, Int32ub, Int32ul, Struct, this
+from bytestruct import GREEDY_BYTES, U32_BE, BinaryDataError, BinaryStruct, ByteReader, Bytes, CodecBase, u32
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.keywrap import aes_key_unwrap
 from packaging.version import Version
@@ -11,16 +13,49 @@ from pyiosbackup.manifest_plist import ManifestPlist
 
 logger = logging.getLogger('pyiosbackup')
 
-encryption_key_struct = Struct(
-    'class_' / Int32ul,
-    'key' / GreedyBytes
-)
 
-keybag_struct = GreedyRange(Struct(
-    'tag' / Bytes(4),
-    'size' / Int32ub,
-    'data' / IfThenElse(this.size == Int32ub.sizeof(), Int32ub, Bytes(this.size)),
-))
+@dataclass
+class EncryptionKey(BinaryStruct, byte_order='<'):
+    """ A wrapped key, prefixed by its protection class. """
+    class_: u32
+    key: Annotated[bytes, GREEDY_BYTES]
+
+
+class KeybagValue(CodecBase[Union[int, bytes]]):
+    """ A big-endian u32 size, then the value: a big-endian u32 when the size is 4, raw bytes otherwise. """
+
+    def read(self, reader: ByteReader) -> Union[int, bytes]:
+        size = U32_BE.read(reader)
+        if size == U32_BE.size:
+            return U32_BE.read(reader)
+        return reader.read(size)
+
+    def build(self, value: Union[int, bytes]) -> bytes:
+        if isinstance(value, int):
+            return U32_BE.build(U32_BE.size) + U32_BE.build(value)
+        return U32_BE.build(len(value)) + value
+
+
+@dataclass
+class KeybagItem(BinaryStruct, byte_order='>'):
+    tag: Annotated[bytes, Bytes(4)]
+    data: Annotated[Union[int, bytes], KeybagValue()]
+
+
+def parse_keybag(data: bytes) -> list[KeybagItem]:
+    """
+    Parse keybag items, stopping at the first one that doesn't parse (trailing bytes are ignored).
+    :param data: Raw keybag.
+    :return: Keybag items.
+    """
+    reader = ByteReader(data)
+    items = []
+    while reader.remaining:
+        try:
+            items.append(KeybagItem.read(reader))
+        except BinaryDataError:
+            break
+    return items
 
 
 def aes_decrypt_wrapped(wrapping_key: bytes, key: bytes, encrypted: bytes) -> bytes:
@@ -56,7 +91,7 @@ class Keybag:
         :return: Keybag object.
         :rtype: Keybag
         """
-        keybag = keybag_struct.parse(manifest.keybag)
+        keybag = parse_keybag(manifest.keybag)
         # The class count excludes the root class (first class in the keybag) and is one based.
         first_class_index = [i for i in range(len(keybag)) if keybag[i].tag == b'CLAS'][0]
         class_count = math.ceil((len(keybag) - first_class_index) / Keybag.CLASS_ELEMENTS_COUNT)
@@ -79,7 +114,7 @@ class Keybag:
         :param key: Wrapped key struct.
         :return: Decrypted data.
         """
-        parsed_key = encryption_key_struct.parse(key)
+        parsed_key = EncryptionKey.parse(key)
         return aes_decrypt_wrapped(self.get_key(parsed_key.class_), parsed_key.key, data)
 
     def get_key(self, class_) -> bytes:
